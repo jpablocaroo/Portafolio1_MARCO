@@ -1,8 +1,8 @@
 """
 App básica de Streamlit — Nivel de ríos/quebradas (CORNARE / MARCO)
 --------------------------------------------------------------------
-Cada estudiante debe cambiar, como mínimo, el código de la estación
-en el sidebar. Los valores de fecha y calidad también son ajustables.
+Versión con parámetros fijos (no editables), consulta automática al
+cargar la página, y sección final para subir una foto de evidencia.
 
 Para correrla:
     streamlit run app_nivel_cornare.py
@@ -31,6 +31,17 @@ CANDIDATOS_LAT = ["lat", "latitude", "latitud"]
 CANDIDATOS_LON = ["lng", "lon", "longitude", "longitud"]
 
 st.set_page_config(page_title="Nivel de estación — CORNARE", page_icon="🌊", layout="wide")
+
+# ------------------------------------------------------------------
+# Parámetros FIJOS de la consulta (edítalos aquí en el código, no
+# desde la interfaz). Cada estudiante debe cambiar estos valores
+# antes de correr la app.
+# ------------------------------------------------------------------
+NOMBRE_ESTUDIANTE = "Juan Pablo Caro Osorio"
+CODIGO_ESTACION = "6"
+FECHA_DESDE = pd.to_datetime("2026-08-28").strftime("%Y-%m-%d")
+FECHA_HASTA = pd.to_datetime("2026-09-01").strftime("%Y-%m-%d")
+CALIDAD = 1  # 1 = solo datos validados
 
 
 # ------------------------------------------------------------------
@@ -111,71 +122,83 @@ def calcular_indice_calidad(df):
 
 
 # ------------------------------------------------------------------
-# Sidebar — parámetros de la consulta (editables por cada estudiante)
+# Sidebar — solo informativo (ya no editable)
 # ------------------------------------------------------------------
-st.sidebar.header("Parámetros de tu consulta")
-nombre_estudiante = st.sidebar.text_input("Nombre del estudiante", "Juan Pablo Caro Osorio")
-codigo_estacion = st.sidebar.text_input("Código de estación", "6")
-fecha_desde = st.sidebar.date_input("Desde", pd.to_datetime("2026-08-28")).strftime("%Y-%m-%d")
-fecha_hasta = st.sidebar.date_input("Hasta", pd.to_datetime("2026-09-01")).strftime("%Y-%m-%d")
-calidad = st.sidebar.selectbox("Calidad", [1, 0], index=0, help="1 = solo datos validados")
-consultar = st.sidebar.button("🔍 Consultar", type="primary")
+st.sidebar.header("Parámetros de la consulta")
+st.sidebar.markdown(f"**Nombre del estudiante:** {NOMBRE_ESTUDIANTE}")
+st.sidebar.markdown(f"**Código de estación:** {CODIGO_ESTACION}")
+st.sidebar.markdown(f"**Desde:** {FECHA_DESDE}")
+st.sidebar.markdown(f"**Hasta:** {FECHA_HASTA}")
+st.sidebar.markdown(f"**Calidad:** {'1 = datos validados' if CALIDAD == 1 else '0 = todos los datos'}")
 
 st.title("🌊 Nivel de ríos y quebradas — CORNARE")
-st.caption(f"Estudiante: **{nombre_estudiante}** · Estación: **{codigo_estacion}**")
+st.caption(f"Estudiante: **{NOMBRE_ESTUDIANTE}** · Estación: **{CODIGO_ESTACION}**")
 
 # ------------------------------------------------------------------
-# Consulta y procesamiento
+# Consulta automática al cargar la página (sin botón)
 # ------------------------------------------------------------------
-if consultar:
-    with st.spinner("Consultando la API..."):
-        datos_crudos, error = obtener_serie_nivel(codigo_estacion, fecha_desde, fecha_hasta, calidad)
+with st.spinner("Consultando la API..."):
+    datos_crudos, error = obtener_serie_nivel(CODIGO_ESTACION, FECHA_DESDE, FECHA_HASTA, CALIDAD)
 
-    if error:
-        st.error(f"❌ {error}")
-    else:
-        registros = obtener_todas_las_paginas(datos_crudos)
-
-        if not registros:
-            st.warning("No hay registros para esta estación y rango de fechas. Prueba otro código u otro rango.")
-        else:
-            df = pd.DataFrame(registros)
-            df = df.rename(columns={LLAVE_FECHA: "fecha", LLAVE_VALOR: "nivel"})
-            df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
-            df["nivel"] = pd.to_numeric(df["nivel"], errors="coerce")
-            df = df.dropna(subset=["fecha", "nivel"]).sort_values("fecha").reset_index(drop=True)
-
-            lat, lon, coords_reales = detectar_coordenadas(datos_crudos)
-            indice_calidad, huecos, n_outliers = calcular_indice_calidad(df)
-
-            # --- Métricas principales ---
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Lecturas", len(df))
-            col2.metric("Nivel promedio", f"{df['nivel'].mean():.2f}")
-            col3.metric("Índice de calidad", f"{indice_calidad} / 100")
-            col4.metric("Outliers detectados", n_outliers)
-
-            # --- Gráfico de la serie ---
-            st.subheader("Serie de nivel")
-            st.line_chart(df.set_index("fecha")["nivel"])
-
-            # --- Mapa de la estación ---
-            st.subheader("Ubicación de la estación")
-            if not coords_reales:
-                st.caption("La API no trajo latitud/longitud de la estación — se muestra el punto de partida (Pascual Bravo). Ajusta `CANDIDATOS_LAT` / `CANDIDATOS_LON` si conoces el nombre real de esas llaves.")
-            st.map(pd.DataFrame({"lat": [lat], "lon": [lon]}), zoom=10)
-
-            # --- Detalle de calidad ---
-            with st.expander("Detalle del índice de calidad"):
-                st.write(f"- Huecos de reporte detectados: **{huecos}**")
-                st.write(f"- Outliers (IQR + nivel negativo): **{n_outliers}** de {len(df)} lecturas")
-                st.write("El índice combina completitud de la serie (70%) y proporción de datos sin outliers (30%).")
-
-            # --- Tabla y descarga ---
-            with st.expander("Ver datos crudos"):
-                st.dataframe(df, use_container_width=True)
-
-            csv = df.to_csv(index=False).encode("utf-8")
-            st.download_button("⬇️ Descargar CSV", csv, file_name=f"nivel_estacion_{codigo_estacion}.csv", mime="text/csv")
+if error:
+    st.error(f"❌ {error}")
 else:
-    st.info("Ajusta los parámetros en el sidebar y presiona **Consultar**.")
+    registros = obtener_todas_las_paginas(datos_crudos)
+
+    if not registros:
+        st.warning("No hay registros para esta estación y rango de fechas. Ajusta los valores fijos en el código.")
+    else:
+        df = pd.DataFrame(registros)
+        df = df.rename(columns={LLAVE_FECHA: "fecha", LLAVE_VALOR: "nivel"})
+        df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
+        df["nivel"] = pd.to_numeric(df["nivel"], errors="coerce")
+        df = df.dropna(subset=["fecha", "nivel"]).sort_values("fecha").reset_index(drop=True)
+
+        lat, lon, coords_reales = detectar_coordenadas(datos_crudos)
+        indice_calidad, huecos, n_outliers = calcular_indice_calidad(df)
+
+        # --- Métricas principales ---
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Lecturas", len(df))
+        col2.metric("Nivel promedio", f"{df['nivel'].mean():.2f}")
+        col3.metric("Índice de calidad", f"{indice_calidad} / 100")
+        col4.metric("Outliers detectados", n_outliers)
+
+        # --- Gráfico de la serie ---
+        st.subheader("Serie de nivel")
+        st.line_chart(df.set_index("fecha")["nivel"])
+
+        # --- Mapa de la estación ---
+        st.subheader("Ubicación de la estación")
+        if not coords_reales:
+            st.caption("La API no trajo latitud/longitud de la estación — se muestra el punto de partida (Pascual Bravo). Ajusta `CANDIDATOS_LAT` / `CANDIDATOS_LON` si conoces el nombre real de esas llaves.")
+        st.map(pd.DataFrame({"lat": [lat], "lon": [lon]}), zoom=10)
+
+        # --- Detalle de calidad ---
+        with st.expander("Detalle del índice de calidad"):
+            st.write(f"- Huecos de reporte detectados: **{huecos}**")
+            st.write(f"- Outliers (IQR + nivel negativo): **{n_outliers}** de {len(df)} lecturas")
+            st.write("El índice combina completitud de la serie (70%) y proporción de datos sin outliers (30%).")
+
+        # --- Tabla y descarga ---
+        with st.expander("Ver datos crudos"):
+            st.dataframe(df, use_container_width=True)
+
+        csv = df.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Descargar CSV", csv, file_name=f"nivel_estacion_{CODIGO_ESTACION}.csv", mime="text/csv")
+
+        # ------------------------------------------------------------------
+        # Sección final — espacio para subir una foto de evidencia
+        # ------------------------------------------------------------------
+        st.divider()
+        st.subheader("📷 Evidencia fotográfica")
+        st.caption("Sube aquí una foto relacionada con la estación o la actividad (por ejemplo, visita de campo).")
+
+        foto = st.file_uploader("Subir foto", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+
+        col_foto, col_espacio = st.columns([1, 1])
+        with col_foto:
+            if foto is not None:
+                st.image(foto, caption=f"Evidencia — Estación {CODIGO_ESTACION}", use_container_width=True)
+            else:
+                st.info("Aún no se ha subido ninguna foto.")
