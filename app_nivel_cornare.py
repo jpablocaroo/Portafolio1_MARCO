@@ -44,7 +44,7 @@ FECHA_HASTA = pd.to_datetime("2026-09-01").strftime("%Y-%m-%d")
 CALIDAD = 1  # 1 = solo datos validados
 
 NOMBRE_ESTACION = "Quebrada Yarumal"
-UBICACION_ESTACION = "Rionegro Cod.6"
+UBICACION_ESTACION = "Rionegro"
 RUTA_FOTO_ESTACION = "PortafolioMARCO.jpg"
 
 # ------------------------------------------------------------------
@@ -142,8 +142,8 @@ with col_foto:
         st.info("Coloca la foto en `RUTA_FOTO_ESTACION` para que aparezca aquí.")
 with col_info:
     st.markdown(f"### {NOMBRE_ESTACION}")
-    st.markdown(f"📍 **Ubicación:** {UBICACION_ESTACION}")
-    st.markdown(f"🔢 **Código de estación:** {CODIGO_ESTACION}")
+    st.markdown(f"**Ubicación:** {UBICACION_ESTACION}")
+    st.markdown(f"**Código de estación:** {CODIGO_ESTACION}")
 st.divider()
 
 with st.spinner("Consultando la API..."):
