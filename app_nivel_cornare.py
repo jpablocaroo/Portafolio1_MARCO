@@ -43,6 +43,9 @@ FECHA_DESDE = pd.to_datetime("2026-08-28").strftime("%Y-%m-%d")
 FECHA_HASTA = pd.to_datetime("2026-09-01").strftime("%Y-%m-%d")
 CALIDAD = 1  # 1 = solo datos validados
 
+NOMBRE_ESTACION = "Nombre de la estación"
+UBICACION_ESTACION = "Municipio / vereda / punto de referencia"
+RUTA_FOTO_ESTACION = "foto_estacion.jpg"
 
 # ------------------------------------------------------------------
 # Funciones de consulta
@@ -120,10 +123,6 @@ def calcular_indice_calidad(df):
     indice = (completitud * 0.7 + (1 - proporcion_outliers) * 0.3) * 100
     return round(indice, 1), int(huecos), int(es_outlier.sum())
 
-
-# ------------------------------------------------------------------
-# Sidebar — solo informativo (ya no editable)
-# ------------------------------------------------------------------
 st.sidebar.header("Parámetros de la consulta")
 st.sidebar.markdown(f"**Nombre del estudiante:** {NOMBRE_ESTUDIANTE}")
 st.sidebar.markdown(f"**Código de estación:** {CODIGO_ESTACION}")
@@ -134,9 +133,19 @@ st.sidebar.markdown(f"**Calidad:** {'1 = datos validados' if CALIDAD == 1 else '
 st.title("🌊 Nivel de ríos y quebradas — CORNARE")
 st.caption(f"Estudiante: **{NOMBRE_ESTUDIANTE}** · Estación: **{CODIGO_ESTACION}**")
 
-# ------------------------------------------------------------------
-# Consulta automática al cargar la página (sin botón)
-# ------------------------------------------------------------------
+st.divider()
+col_foto, col_info = st.columns([1, 2])
+with col_foto:
+    try:
+        st.image(RUTA_FOTO_ESTACION, use_container_width=True)
+    except Exception:
+        st.info("Coloca la foto en `RUTA_FOTO_ESTACION` para que aparezca aquí.")
+with col_info:
+    st.markdown(f"### {NOMBRE_ESTACION}")
+    st.markdown(f"📍 **Ubicación:** {UBICACION_ESTACION}")
+    st.markdown(f"🔢 **Código de estación:** {CODIGO_ESTACION}")
+st.divider()
+
 with st.spinner("Consultando la API..."):
     datos_crudos, error = obtener_serie_nivel(CODIGO_ESTACION, FECHA_DESDE, FECHA_HASTA, CALIDAD)
 
@@ -186,19 +195,3 @@ else:
 
         csv = df.to_csv(index=False).encode("utf-8")
         st.download_button("⬇️ Descargar CSV", csv, file_name=f"nivel_estacion_{CODIGO_ESTACION}.csv", mime="text/csv")
-
-        # ------------------------------------------------------------------
-        # Sección final — espacio para subir una foto de evidencia
-        # ------------------------------------------------------------------
-        st.divider()
-        st.subheader("📷 Evidencia fotográfica")
-        st.caption("Sube aquí una foto relacionada con la estación o la actividad (por ejemplo, visita de campo).")
-
-        foto = st.file_uploader("Subir foto", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
-
-        col_foto, col_espacio = st.columns([1, 1])
-        with col_foto:
-            if foto is not None:
-                st.image(foto, caption=f"Evidencia — Estación {CODIGO_ESTACION}", use_container_width=True)
-            else:
-                st.info("Aún no se ha subido ninguna foto.")
