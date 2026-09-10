@@ -43,9 +43,9 @@ FECHA_DESDE = pd.to_datetime("2026-08-28").strftime("%Y-%m-%d")
 FECHA_HASTA = pd.to_datetime("2026-09-01").strftime("%Y-%m-%d")
 CALIDAD = 1  # 1 = solo datos validados
 
-NOMBRE_ESTACION = "Nombre de la estación"
-UBICACION_ESTACION = "Municipio / vereda / punto de referencia"
-RUTA_FOTO_ESTACION = "foto_estacion.jpg"
+NOMBRE_ESTACION = "Quebrada Yarumal"
+UBICACION_ESTACION = "Rionegro Cod.6"
+RUTA_FOTO_ESTACION = "PortafolioMARCO.jpg"
 
 # ------------------------------------------------------------------
 # Funciones de consulta
